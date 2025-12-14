@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { Wrench, UserPlus, Loader2, CheckCircle2 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -70,6 +71,15 @@ const Register = () => {
       }
       setLoading(false);
       return;
+    }
+
+    // Send confirmation email
+    try {
+      await supabase.functions.invoke('send-confirmation-email', {
+        body: { email, fullName, type: 'registration' }
+      });
+    } catch (emailError) {
+      console.error('Failed to send confirmation email:', emailError);
     }
 
     setSuccess(true);

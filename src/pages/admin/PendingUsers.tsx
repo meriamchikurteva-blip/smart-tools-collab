@@ -46,6 +46,7 @@ const PendingUsers = () => {
 
   const handleApprove = async (userId: string) => {
     setProcessingId(userId);
+    const user = users.find(u => u.id === userId);
     
     const { error } = await supabase
       .from('profiles')
@@ -59,6 +60,17 @@ const PendingUsers = () => {
         variant: 'destructive',
       });
     } else {
+      // Send approval email
+      if (user) {
+        try {
+          await supabase.functions.invoke('send-confirmation-email', {
+            body: { email: user.email, fullName: user.full_name, type: 'approval' }
+          });
+        } catch (emailError) {
+          console.error('Failed to send approval email:', emailError);
+        }
+      }
+      
       toast({
         title: 'Успех',
         description: 'Потребителят е одобрен',
@@ -70,6 +82,7 @@ const PendingUsers = () => {
 
   const handleReject = async (userId: string) => {
     setProcessingId(userId);
+    const user = users.find(u => u.id === userId);
     
     const { error } = await supabase
       .from('profiles')
@@ -83,6 +96,17 @@ const PendingUsers = () => {
         variant: 'destructive',
       });
     } else {
+      // Send rejection email
+      if (user) {
+        try {
+          await supabase.functions.invoke('send-confirmation-email', {
+            body: { email: user.email, fullName: user.full_name, type: 'rejection' }
+          });
+        } catch (emailError) {
+          console.error('Failed to send rejection email:', emailError);
+        }
+      }
+      
       toast({
         title: 'Готово',
         description: 'Потребителят е отхвърлен',
