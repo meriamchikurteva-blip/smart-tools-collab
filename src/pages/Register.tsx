@@ -53,7 +53,7 @@ const Register = () => {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, fullName);
+    const { error, approvalToken } = await signUp(email, password, fullName);
 
     if (error) {
       if (error.message.includes('already registered')) {
@@ -73,13 +73,30 @@ const Register = () => {
       return;
     }
 
-    // Send confirmation email
+    // Send confirmation email to user
     try {
       await supabase.functions.invoke('send-confirmation-email', {
         body: { email, fullName, type: 'registration' }
       });
     } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError);
+    }
+
+    // Send admin notification with approval link
+    if (approvalToken) {
+      try {
+        await supabase.functions.invoke('send-confirmation-email', {
+          body: { 
+            email, 
+            fullName, 
+            type: 'admin_notification',
+            approvalToken,
+            appUrl: window.location.origin
+          }
+        });
+      } catch (adminEmailError) {
+        console.error('Failed to send admin notification:', adminEmailError);
+      }
     }
 
     setSuccess(true);

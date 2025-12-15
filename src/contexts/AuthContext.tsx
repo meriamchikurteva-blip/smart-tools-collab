@@ -17,7 +17,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null; approvalToken: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; pendingApproval?: boolean }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
@@ -76,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
+    const approvalToken = crypto.randomUUID();
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -86,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
-      return { error };
+      return { error, approvalToken: null };
     }
 
     if (data.user) {
@@ -96,14 +97,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         full_name: fullName,
         status: 'PENDING',
         role: 'USER',
+        approval_token: approvalToken,
       });
 
       if (profileError) {
-        return { error: profileError as Error };
+        return { error: profileError as Error, approvalToken: null };
       }
     }
 
-    return { error: null };
+    return { error: null, approvalToken };
   };
 
   const signIn = async (email: string, password: string) => {

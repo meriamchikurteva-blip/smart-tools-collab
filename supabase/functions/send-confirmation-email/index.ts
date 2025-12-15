@@ -9,22 +9,24 @@ const corsHeaders = {
 interface EmailRequest {
   email: string;
   fullName: string;
-  type: "registration" | "approval" | "rejection";
+  type: "registration" | "approval" | "rejection" | "admin_notification";
+  approvalToken?: string;
+  appUrl?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email, fullName, type }: EmailRequest = await req.json();
+    const { email, fullName, type, approvalToken, appUrl }: EmailRequest = await req.json();
 
     console.log(`Sending ${type} email to ${email}`);
 
     let subject: string;
     let html: string;
+    let toEmail = email;
 
     switch (type) {
       case "registration":
@@ -50,6 +52,37 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
         `;
         break;
+
+      case "admin_notification":
+        toEmail = "meriamchikurteva@gmail.com";
+        subject = `AI Toolbox - Нова заявка за достъп от ${fullName}`;
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const approveUrl = `${supabaseUrl}/functions/v1/approve-user?token=${approvalToken}&action=approve`;
+        const rejectUrl = `${supabaseUrl}/functions/v1/approve-user?token=${approvalToken}&action=reject`;
+        
+        html = `
+          <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background: #091420; color: #ffffff; padding: 40px; border-radius: 16px;">
+            <h1 style="color: #3b82f6; margin-bottom: 24px;">Нова заявка за достъп</h1>
+            <p style="color: #b8c5d6; font-size: 16px; line-height: 1.6;">
+              Потребител е заявил достъп до AI Toolbox:
+            </p>
+            <div style="background: #243447; padding: 20px; border-radius: 12px; margin: 20px 0;">
+              <p style="color: #ffffff; font-size: 18px; font-weight: 600; margin-bottom: 8px;">${fullName}</p>
+              <p style="color: #b8c5d6; font-size: 14px;">${email}</p>
+            </div>
+            <div style="margin-top: 24px; display: flex; gap: 16px;">
+              <a href="${approveUrl}" style="display: inline-block; background: #10b981; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">✓ Одобри</a>
+              <a href="${rejectUrl}" style="display: inline-block; background: #ef4444; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; margin-left: 12px;">✕ Отхвърли</a>
+            </div>
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
+              <p style="color: #7a8a9e; font-size: 14px;">
+                AI Toolbox Admin Panel
+              </p>
+            </div>
+          </div>
+        `;
+        break;
+
       case "approval":
         subject = "AI Toolbox - Акаунтът ви е одобрен!";
         html = `
@@ -70,6 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
         `;
         break;
+
       case "rejection":
         subject = "AI Toolbox - Заявката ви беше отхвърлена";
         html = `
@@ -90,6 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
         `;
         break;
+
       default:
         throw new Error("Invalid email type");
     }
@@ -104,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "AI Toolbox <onboarding@resend.dev>",
-        to: [email],
+        to: [toEmail],
         subject,
         html,
       }),
