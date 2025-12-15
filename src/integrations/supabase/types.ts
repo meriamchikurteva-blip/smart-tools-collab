@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          approval_token: string | null
           approved_at: string | null
           created_at: string
           email: string
@@ -25,6 +26,7 @@ export type Database = {
           status: Database["public"]["Enums"]["user_status"]
         }
         Insert: {
+          approval_token?: string | null
           approved_at?: string | null
           created_at?: string
           email: string
@@ -34,6 +36,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["user_status"]
         }
         Update: {
+          approval_token?: string | null
           approved_at?: string | null
           created_at?: string
           email?: string
